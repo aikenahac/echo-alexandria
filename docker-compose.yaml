@@ -18,6 +18,8 @@ services:
       - "work_mem=50MB"
       - "-c"
       - "maintenance_work_mem=1GB"
+    networks:
+      - echo-alexandria-network
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
@@ -37,6 +39,8 @@ services:
     volumes:
       - echo_data_es_data:/usr/share/elasticsearch/data
     restart: unless-stopped
+    networks:
+      - echo-alexandria-network
 
   api:
     image: ghcr.io/aikenahac/echo-alexandria:master
@@ -52,7 +56,13 @@ services:
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    networks:
+      - echo-alexandria-network
 
 volumes:
   echo_data_db_data:
   echo_data_es_data:
+
+networks:
+  echo-alexandria-network:
+    driver: bridge
