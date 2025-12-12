@@ -39,7 +39,7 @@ services:
     restart: unless-stopped
 
   api:
-    build: .
+    image: ghcr.io/aikenahac/echo-alexandria:master
     container_name: echo_data_api
     env_file:
       - .env
