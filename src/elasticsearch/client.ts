@@ -1,25 +1,106 @@
-import { Client } from "@elastic/elasticsearch";
+/**
+ * Elasticsearch REST API wrapper using fetch (compatible with Bun)
+ * The @elastic/elasticsearch client has compatibility issues with Bun,
+ * so we use direct REST API calls instead.
+ */
 
-let esClient: Client | null = null;
-
-function getElasticsearchClient(): Client {
-  if (!esClient) {
-    if (!process.env.ELASTICSEARCH_URL) {
-      throw new Error("ELASTICSEARCH_URL is not set");
-    }
-    esClient = new Client({
-      node: process.env.ELASTICSEARCH_URL,
-    });
+function getElasticsearchUrl(): string {
+  const url = process.env.ELASTICSEARCH_URL;
+  if (!url) {
+    throw new Error("ELASTICSEARCH_URL is not set");
   }
-  return esClient;
+  return url;
 }
 
-// Lazy-loaded singleton with Proxy pattern
-export const es = new Proxy({} as Client, {
-  get: (_, prop) => {
-    return getElasticsearchClient()[prop as keyof Client];
+/**
+ * Make a request to Elasticsearch REST API
+ */
+async function esRequest(
+  method: string,
+  path: string,
+  body?: any
+): Promise<any> {
+  const url = `${getElasticsearchUrl()}${path}`;
+  const options: RequestInit = {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(url, options);
+
+  if (!response.ok && response.status !== 404) {
+    const errorText = await response.text();
+    throw new Error(
+      `Elasticsearch error [${response.status}]: ${errorText}`
+    );
+  }
+
+  return response.json();
+}
+
+/**
+ * Elasticsearch API wrapper compatible with Bun
+ */
+export const es = {
+  indices: {
+    async exists(params: { index: string }): Promise<boolean> {
+      try {
+        const response = await fetch(
+          `${getElasticsearchUrl()}/${params.index}`,
+          { method: "HEAD" }
+        );
+        return response.status === 200;
+      } catch {
+        return false;
+      }
+    },
+
+    async create(params: { index: string; body: any }): Promise<any> {
+      return esRequest("PUT", `/${params.index}`, params.body);
+    },
+
+    async delete(params: { index: string }): Promise<any> {
+      return esRequest("DELETE", `/${params.index}`);
+    },
+
+    async refresh(params: { index: string }): Promise<any> {
+      return esRequest("POST", `/${params.index}/_refresh`);
+    },
   },
-}) as Client;
+
+  async bulk(params: { body: any[] }): Promise<any> {
+    // Elasticsearch bulk API expects newline-delimited JSON
+    const ndjson =
+      params.body.map((item) => JSON.stringify(item)).join("\n") + "\n";
+
+    const response = await fetch(`${getElasticsearchUrl()}/_bulk`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-ndjson",
+      },
+      body: ndjson,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Elasticsearch bulk error [${response.status}]: ${errorText}`
+      );
+    }
+
+    return response.json();
+  },
+
+  async search(params: { index: string; body: any }): Promise<any> {
+    return esRequest("POST", `/${params.index}/_search`, params.body);
+  },
+};
 
 /**
  * Test Elasticsearch connection and return detailed error info
@@ -29,19 +110,8 @@ export async function checkElasticsearchConnection(): Promise<{
   error?: string;
   details?: any;
 }> {
-  const url = process.env.ELASTICSEARCH_URL;
+  const url = getElasticsearchUrl();
 
-  if (!url) {
-    return {
-      connected: false,
-      error: "ELASTICSEARCH_URL environment variable is not set",
-      details: {
-        suggestion: "Set ELASTICSEARCH_URL in your .env file",
-      },
-    };
-  }
-
-  // First, try a simple HTTP health check
   try {
     console.log(`Testing connection to Elasticsearch at ${url}...`);
     const response = await fetch(url);
@@ -58,23 +128,12 @@ export async function checkElasticsearchConnection(): Promise<{
       };
     }
 
-    const data = await response.json() as any;
+    const data = (await response.json()) as any;
     console.log(
       `✓ Elasticsearch is running (version: ${data.version?.number || "unknown"})`
     );
 
-    // Now try using the official client
-    try {
-      const client = getElasticsearchClient();
-      await client.ping();
-      return { connected: true };
-    } catch (clientError) {
-      // Elasticsearch is running but client has issues - continue anyway
-      console.warn(
-        "Warning: Elasticsearch client ping failed, but HTTP check succeeded. Continuing..."
-      );
-      return { connected: true };
-    }
+    return { connected: true };
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : String(error);
