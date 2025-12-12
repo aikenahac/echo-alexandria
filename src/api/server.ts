@@ -88,6 +88,30 @@ app.post("/api/admin/import/:type", async (c) => {
   }
 });
 
+// Get import status for a specific type
+app.get("/api/admin/import/status/:type", async (c) => {
+  const apiKey = c.req.header("X-API-Key");
+  if (apiKey !== process.env.ADMIN_API_KEY) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const type = c.req.param("type") as "works" | "editions" | "authors";
+
+  if (!["works", "editions", "authors"].includes(type)) {
+    return c.json({ error: "Invalid import type" }, 400);
+  }
+
+  try {
+    const { getLatestImportJob } = await import("./import-status");
+    const job = await getLatestImportJob(type);
+
+    return c.json(job);
+  } catch (error) {
+    console.error(`Failed to get ${type} import status:`, error);
+    return c.json({ error: "Failed to get import status" }, 500);
+  }
+});
+
 // Catalog listing endpoints (for admin UI)
 app.get("/api/catalog/authors", async (c) => {
   const page = parseInt(c.req.query("page") || "1");
