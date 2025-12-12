@@ -6,14 +6,18 @@ import { BatchInserter, upsertEditionsBatch } from "./batch";
 import { eq, inArray } from "drizzle-orm";
 import { createIndices } from "../elasticsearch/indices";
 import { bulkIndexEditions, refreshIndices } from "../elasticsearch/indexing";
+import { ProgressLogger } from "./progress";
 
 export async function importEditions() {
   const jobId = crypto.randomUUID();
 
+  console.log("");
+  console.log("=".repeat(70));
   console.log(`Starting editions import (Job ID: ${jobId})`);
   console.log(
     `NOTE: This is the largest dump (~45GB uncompressed) and will take several hours.`
   );
+  console.log("=".repeat(70));
 
   // Create import job
   await db.insert(importJobs).values({
@@ -27,14 +31,16 @@ export async function importEditions() {
 
   try {
     // Ensure Elasticsearch indices exist
-    console.log("Ensuring Elasticsearch indices exist...");
+    console.log("\n>>> Ensuring Elasticsearch indices exist...");
     await createIndices();
 
     // Download dump
-    console.log("Downloading editions dump...");
+    console.log("\n>>> Downloading editions dump...");
     const filePath = await downloadDump("editions");
 
-    console.log("Parsing and importing editions...");
+    // Initialize progress logger
+    const progress = new ProgressLogger("Editions", 10000);
+    progress.logPhase("Parsing and importing editions...");
 
     // Batch inserter (1000 records per batch)
     const inserter = new BatchInserter(1000, async (batch) => {
@@ -119,9 +125,11 @@ export async function importEditions() {
         await inserter.add(record);
         recordsProcessed++;
 
+        // Log progress
+        progress.log(recordsProcessed);
+
         if (recordsProcessed % 10000 === 0) {
-          console.log(`Processed ${recordsProcessed} editions...`);
-          // Update progress
+          // Update progress in database
           await db
             .update(importJobs)
             .set({ recordsProcessed })
@@ -134,7 +142,7 @@ export async function importEditions() {
     recordsInserted = inserter.getTotalInserted();
 
     // Refresh Elasticsearch indices to make searchable
-    console.log("Refreshing Elasticsearch indices...");
+    progress.logPhase("Refreshing Elasticsearch indices...");
     await refreshIndices();
 
     // Mark job complete
@@ -148,9 +156,8 @@ export async function importEditions() {
       })
       .where(eq(importJobs.id, jobId));
 
-    console.log(`Editions import complete!`);
-    console.log(`- Processed: ${recordsProcessed}`);
-    console.log(`- Inserted/Updated: ${recordsInserted}`);
+    // Log final summary
+    progress.logComplete(recordsProcessed, recordsInserted);
 
     return { success: true, jobId, recordsProcessed, recordsInserted };
   } catch (error) {

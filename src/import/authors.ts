@@ -6,11 +6,15 @@ import { BatchInserter, upsertAuthorsBatch } from "./batch";
 import { eq } from "drizzle-orm";
 import { createIndices } from "../elasticsearch/indices";
 import { bulkIndexAuthors, refreshIndices } from "../elasticsearch/indexing";
+import { ProgressLogger } from "./progress";
 
 export async function importAuthors() {
   const jobId = crypto.randomUUID();
 
+  console.log("");
+  console.log("=".repeat(70));
   console.log(`Starting authors import (Job ID: ${jobId})`);
+  console.log("=".repeat(70));
 
   // Create import job
   await db.insert(importJobs).values({
@@ -24,14 +28,16 @@ export async function importAuthors() {
 
   try {
     // Ensure Elasticsearch indices exist
-    console.log("Ensuring Elasticsearch indices exist...");
+    console.log("\n>>> Ensuring Elasticsearch indices exist...");
     await createIndices();
 
     // Download dump
-    console.log("Downloading authors dump...");
+    console.log("\n>>> Downloading authors dump...");
     const filePath = await downloadDump("authors");
 
-    console.log("Parsing and importing authors...");
+    // Initialize progress logger
+    const progress = new ProgressLogger("Authors", 10000);
+    progress.logPhase("Parsing and importing authors...");
 
     // Batch inserter (1000 records per batch)
     const inserter = new BatchInserter(1000, async (batch) => {
@@ -64,9 +70,11 @@ export async function importAuthors() {
         await inserter.add(record);
         recordsProcessed++;
 
+        // Log progress
+        progress.log(recordsProcessed);
+
         if (recordsProcessed % 10000 === 0) {
-          console.log(`Processed ${recordsProcessed} authors...`);
-          // Update progress
+          // Update progress in database
           await db
             .update(importJobs)
             .set({ recordsProcessed })
@@ -79,7 +87,7 @@ export async function importAuthors() {
     recordsInserted = inserter.getTotalInserted();
 
     // Refresh Elasticsearch indices to make searchable
-    console.log("Refreshing Elasticsearch indices...");
+    progress.logPhase("Refreshing Elasticsearch indices...");
     await refreshIndices();
 
     // Mark job complete
@@ -93,9 +101,8 @@ export async function importAuthors() {
       })
       .where(eq(importJobs.id, jobId));
 
-    console.log(`Authors import complete!`);
-    console.log(`- Processed: ${recordsProcessed}`);
-    console.log(`- Inserted/Updated: ${recordsInserted}`);
+    // Log final summary
+    progress.logComplete(recordsProcessed, recordsInserted);
 
     return { success: true, jobId, recordsProcessed, recordsInserted };
   } catch (error) {

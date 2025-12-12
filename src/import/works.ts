@@ -4,11 +4,15 @@ import { downloadDump } from "./download";
 import { parseDump } from "./parse";
 import { BatchInserter, upsertWorksBatch } from "./batch";
 import { eq } from "drizzle-orm";
+import { ProgressLogger } from "./progress";
 
 export async function importWorks() {
   const jobId = crypto.randomUUID();
 
+  console.log("");
+  console.log("=".repeat(70));
   console.log(`Starting works import (Job ID: ${jobId})`);
+  console.log("=".repeat(70));
 
   // Create import job
   await db.insert(importJobs).values({
@@ -22,10 +26,12 @@ export async function importWorks() {
 
   try {
     // Download dump
-    console.log("Downloading works dump...");
+    console.log("\n>>> Downloading works dump...");
     const filePath = await downloadDump("works");
 
-    console.log("Parsing and importing works...");
+    // Initialize progress logger
+    const progress = new ProgressLogger("Works", 10000);
+    progress.logPhase("Parsing and importing works...");
 
     // Batch inserter (1000 records per batch)
     const inserter = new BatchInserter(1000, async (batch) => {
@@ -64,9 +70,11 @@ export async function importWorks() {
         await inserter.add(record);
         recordsProcessed++;
 
+        // Log progress
+        progress.log(recordsProcessed);
+
         if (recordsProcessed % 10000 === 0) {
-          console.log(`Processed ${recordsProcessed} works...`);
-          // Update progress
+          // Update progress in database
           await db
             .update(importJobs)
             .set({ recordsProcessed })
@@ -89,9 +97,8 @@ export async function importWorks() {
       })
       .where(eq(importJobs.id, jobId));
 
-    console.log(`Works import complete!`);
-    console.log(`- Processed: ${recordsProcessed}`);
-    console.log(`- Inserted/Updated: ${recordsInserted}`);
+    // Log final summary
+    progress.logComplete(recordsProcessed, recordsInserted);
 
     return { success: true, jobId, recordsProcessed, recordsInserted };
   } catch (error) {

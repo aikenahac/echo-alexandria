@@ -1,4 +1,4 @@
-import { es } from "./client";
+import { es, checkElasticsearchConnection } from "./client";
 
 export const INDICES = {
   EDITIONS: "editions",
@@ -10,6 +10,18 @@ export const INDICES = {
  */
 export async function createIndices() {
   console.log("Creating Elasticsearch indices...");
+
+  // First, check if Elasticsearch is accessible
+  const connectionStatus = await checkElasticsearchConnection();
+  if (!connectionStatus.connected) {
+    throw new Error(
+      `Cannot connect to Elasticsearch: ${connectionStatus.error}\n` +
+        `URL: ${connectionStatus.details?.url}\n` +
+        `Suggestion: ${connectionStatus.details?.suggestion}`
+    );
+  }
+
+  console.log("✓ Elasticsearch connection verified");
 
   // Create editions index
   const editionsExists = await es.indices.exists({ index: INDICES.EDITIONS });
@@ -124,6 +136,18 @@ export async function createIndices() {
  */
 export async function recreateIndices() {
   console.log("Recreating Elasticsearch indices...");
+
+  // First, check if Elasticsearch is accessible
+  const connectionStatus = await checkElasticsearchConnection();
+  if (!connectionStatus.connected) {
+    throw new Error(
+      `Cannot connect to Elasticsearch: ${connectionStatus.error}\n` +
+        `URL: ${connectionStatus.details?.url}\n` +
+        `Suggestion: ${connectionStatus.details?.suggestion}`
+    );
+  }
+
+  console.log("✓ Elasticsearch connection verified");
 
   // Delete if exists
   const editionsExists = await es.indices.exists({ index: INDICES.EDITIONS });
