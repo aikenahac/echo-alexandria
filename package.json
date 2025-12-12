@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun src/index.ts",
+    "start": "bun src/db/migrate.ts && bun src/index.ts",
+    "migrate": "bun src/db/migrate.ts",
     "import:authors": "bun src/import/authors.ts",
     "import:works": "bun src/import/works.ts",
     "import:editions": "bun src/import/editions.ts",

@@ -20,8 +20,17 @@ RUN echo "0 2 5 * * cd /app && bun src/jobs/refresh.ts >> /var/log/cron.log 2>&1
     crontab /etc/cron.d/monthly-refresh && \
     touch /var/log/cron.log
 
+# Create startup script
+RUN echo '#!/bin/bash\n\
+echo "Running database migrations..."\n\
+bun src/db/migrate.ts\n\
+echo "Starting cron daemon..."\n\
+cron\n\
+echo "Starting API server..."\n\
+bun src/index.ts' > /app/start.sh && chmod +x /app/start.sh
+
 # Expose API port
 EXPOSE 3000
 
-# Start cron and API server
-CMD cron && bun src/index.ts
+# Run migrations then start cron and API server
+CMD ["/app/start.sh"]
