@@ -4,6 +4,7 @@ import { searchEditions, searchAuthors } from "../elasticsearch/search";
 import { importAuthors } from "../import/authors";
 import { importWorks } from "../import/works";
 import { importEditions } from "../import/editions";
+import { listAuthors, listWorks, listEditions } from "./catalog";
 
 const app = new Hono();
 
@@ -84,6 +85,49 @@ app.post("/api/admin/import/:type", async (c) => {
   } catch (error) {
     console.error(`Failed to start ${type} import:`, error);
     return c.json({ error: "Failed to start import" }, 500);
+  }
+});
+
+// Catalog listing endpoints (for admin UI)
+app.get("/api/catalog/authors", async (c) => {
+  const page = parseInt(c.req.query("page") || "1");
+  const pageSize = parseInt(c.req.query("pageSize") || "50");
+  const search = c.req.query("search");
+
+  try {
+    const result = await listAuthors(page, pageSize, search);
+    return c.json(result);
+  } catch (error) {
+    console.error("List authors error:", error);
+    return c.json({ error: "Failed to list authors" }, 500);
+  }
+});
+
+app.get("/api/catalog/works", async (c) => {
+  const page = parseInt(c.req.query("page") || "1");
+  const pageSize = parseInt(c.req.query("pageSize") || "50");
+  const search = c.req.query("search");
+
+  try {
+    const result = await listWorks(page, pageSize, search);
+    return c.json(result);
+  } catch (error) {
+    console.error("List works error:", error);
+    return c.json({ error: "Failed to list works" }, 500);
+  }
+});
+
+app.get("/api/catalog/editions", async (c) => {
+  const page = parseInt(c.req.query("page") || "1");
+  const pageSize = parseInt(c.req.query("pageSize") || "50");
+  const search = c.req.query("search");
+
+  try {
+    const result = await listEditions(page, pageSize, search);
+    return c.json(result);
+  } catch (error) {
+    console.error("List editions error:", error);
+    return c.json({ error: "Failed to list editions" }, 500);
   }
 });
 
