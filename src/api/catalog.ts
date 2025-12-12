@@ -29,10 +29,12 @@ export async function listAuthors(
     : undefined;
 
   // Get total count
-  const [{ count }] = await db
+  const countResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(authors)
     .where(whereClause);
+
+  const count = countResult[0]?.count || 0;
 
   // Get paginated data
   const data = await db
@@ -71,10 +73,12 @@ export async function listWorks(
 
   const whereClause = search ? ilike(works.title, `%${search}%`) : undefined;
 
-  const [{ count }] = await db
+  const countResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(works)
     .where(whereClause);
+
+  const count = countResult[0]?.count || 0;
 
   const data = await db
     .select({
@@ -112,10 +116,12 @@ export async function listEditions(
 
   const whereClause = search ? ilike(editions.title, `%${search}%`) : undefined;
 
-  const [{ count }] = await db
+  const countResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(editions)
     .where(whereClause);
+
+  const count = countResult[0]?.count || 0;
 
   const data = await db
     .select({
