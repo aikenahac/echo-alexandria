@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:17
+    container_name: echo_data_db
+    env_file:
+      - .env
+    ports:
+      - 5433:5432
+    volumes:
+      - echo_data_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    shm_size: 1g
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=2GB"
+      - "-c"
+      - "work_mem=50MB"
+      - "-c"
+      - "maintenance_work_mem=1GB"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: echo_data_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      - echo_data_es_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+
+  api:
+    build: .
+    container_name: echo_data_api
+    env_file:
+      - .env
+    ports:
+      - 3001:3000
+    depends_on:
+      - db
+      - elasticsearch
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+volumes:
+  echo_data_db_data:
+  echo_data_es_data:
