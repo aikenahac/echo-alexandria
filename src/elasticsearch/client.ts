@@ -69,17 +69,34 @@ export const es = {
       return esRequest("DELETE", `/${params.index}`);
     },
 
-    async refresh(params: { index: string }): Promise<any> {
-      return esRequest("POST", `/${params.index}/_refresh`);
+    async refresh(params: { index: string | string[] }): Promise<any> {
+      const indices = Array.isArray(params.index)
+        ? params.index.join(",")
+        : params.index;
+      return esRequest("POST", `/${indices}/_refresh`);
     },
   },
 
-  async bulk(params: { body: any[] }): Promise<any> {
+  async bulk(params: {
+    body?: any[];
+    operations?: any[];
+    refresh?: boolean;
+  }): Promise<any> {
+    // Support both 'body' and 'operations' parameter names
+    const operations = params.body || params.operations;
+    if (!operations) {
+      throw new Error("bulk() requires either 'body' or 'operations' parameter");
+    }
+
     // Elasticsearch bulk API expects newline-delimited JSON
     const ndjson =
-      params.body.map((item) => JSON.stringify(item)).join("\n") + "\n";
+      operations.map((item) => JSON.stringify(item)).join("\n") + "\n";
 
-    const response = await fetch(`${getElasticsearchUrl()}/_bulk`, {
+    const url = params.refresh
+      ? `${getElasticsearchUrl()}/_bulk?refresh=true`
+      : `${getElasticsearchUrl()}/_bulk`;
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-ndjson",
