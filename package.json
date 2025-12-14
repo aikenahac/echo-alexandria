@@ -11,7 +11,7 @@
     "import:works": "bun src/import/works.ts",
     "import:editions": "bun src/import/editions.ts",
     "import:all": "bun src/jobs/refresh.ts",
-    "es:reindex": "bun src/elasticsearch/reindex-from-db.ts",
+    "es:reindex": "bun src/elasticsearch/reindex-with-tracking.ts",
     "es:test": "bun src/elasticsearch/test-search.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",

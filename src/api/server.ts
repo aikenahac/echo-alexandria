@@ -113,6 +113,72 @@ app.get("/api/admin/import/status/:type", async (c) => {
   }
 });
 
+// Elasticsearch re-index trigger
+app.post("/api/admin/reindex", async (c) => {
+  const apiKey = c.req.header("X-API-Key");
+  if (apiKey !== process.env.ADMIN_API_KEY) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { reindexWithTracking } = await import("../elasticsearch/reindex-with-tracking");
+    const jobId = crypto.randomUUID();
+
+    // Start reindex in background (don't await)
+    reindexWithTracking(jobId).catch((error) => {
+      console.error("Reindex failed:", error);
+    });
+
+    return c.json({
+      message: "Elasticsearch re-index started",
+      jobId,
+      status: "started",
+    });
+  } catch (error) {
+    console.error("Failed to start reindex:", error);
+    return c.json({ error: "Failed to start reindex" }, 500);
+  }
+});
+
+// Get reindex status
+app.get("/api/admin/reindex/status", async (c) => {
+  const apiKey = c.req.header("X-API-Key");
+  if (apiKey !== process.env.ADMIN_API_KEY) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { getLatestReindexJob } = await import("../elasticsearch/reindex-with-tracking");
+    const job = await getLatestReindexJob();
+
+    if (!job) {
+      return c.json({ status: "no_jobs", message: "No reindex jobs found" });
+    }
+
+    // Calculate progress percentage
+    let progress = 0;
+    if (job.status === "completed") {
+      progress = 100;
+    } else if (job.status === "running") {
+      const authorsProgress = job.totalAuthors > 0
+        ? (job.authorsIndexed / job.totalAuthors) * 50
+        : 0;
+      const editionsProgress = job.totalEditions > 0
+        ? (job.editionsIndexed / job.totalEditions) * 50
+        : 0;
+      progress = authorsProgress + editionsProgress;
+    }
+
+    return c.json({
+      ...job,
+      progress: Math.round(progress),
+    });
+  } catch (error) {
+    console.error("Failed to get reindex status:", error);
+    return c.json({ error: "Failed to get reindex status" }, 500);
+  }
+});
+
 // Catalog listing endpoints (for admin UI)
 app.get("/api/catalog/authors", async (c) => {
   const page = parseInt(c.req.query("page") || "1");

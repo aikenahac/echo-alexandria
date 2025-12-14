@@ -8,6 +8,13 @@
       "when": 1765501370905,
       "tag": "0000_quiet_senator_kelly",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765750235910,
+      "tag": "0001_bizarre_living_tribunal",
+      "breakpoints": true
     }
   ]
 }

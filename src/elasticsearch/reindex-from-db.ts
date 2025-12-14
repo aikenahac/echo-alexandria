@@ -2,7 +2,7 @@ import { db } from "../db";
 import { editions, authors } from "../db/schema";
 import { recreateIndices } from "./indices";
 import { bulkIndexEditions, bulkIndexAuthors, refreshIndices } from "./indexing";
-import { sql } from "drizzle-orm";
+import { count } from "drizzle-orm";
 
 /**
  * Re-index Elasticsearch from existing PostgreSQL data
@@ -17,8 +17,8 @@ async function reindexEditions() {
   let totalIndexed = 0;
 
   // Get total count
-  const countResult = await db.execute(sql`SELECT COUNT(*) as count FROM ${editions}`);
-  const totalEditions = Number(countResult.rows[0].count);
+  const countResult = await db.select({ count: count() }).from(editions);
+  const totalEditions = Number(countResult[0].count);
   console.log(`Total editions in database: ${totalEditions.toLocaleString()}`);
 
   const startTime = Date.now();
@@ -72,8 +72,8 @@ async function reindexAuthors() {
   let totalIndexed = 0;
 
   // Get total count
-  const countResult = await db.execute(sql`SELECT COUNT(*) as count FROM ${authors}`);
-  const totalAuthors = Number(countResult.rows[0].count);
+  const countResult = await db.select({ count: count() }).from(authors);
+  const totalAuthors = Number(countResult[0].count);
   console.log(`Total authors in database: ${totalAuthors.toLocaleString()}`);
 
   const startTime = Date.now();

@@ -123,3 +123,25 @@ export const importJobs = pgTable(
     startedAtIdx: index("import_jobs_started_at_idx").on(table.startedAt),
   })
 );
+
+// Reindex tracking table
+export const reindexJobs = pgTable(
+  "reindex_jobs",
+  {
+    id: text("id").primaryKey(), // UUID
+    type: text("type").notNull(), // "authors" | "editions" | "full"
+    status: text("status").notNull(), // "running" | "completed" | "failed"
+    authorsIndexed: integer("authors_indexed").default(0),
+    editionsIndexed: integer("editions_indexed").default(0),
+    totalAuthors: integer("total_authors").default(0),
+    totalEditions: integer("total_editions").default(0),
+    currentPhase: text("current_phase"), // "recreating_indices" | "indexing_authors" | "indexing_editions" | "refreshing"
+    error: text("error"),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    completedAt: timestamp("completed_at"),
+  },
+  (table) => ({
+    statusIdx: index("reindex_jobs_status_idx").on(table.status),
+    startedAtIdx: index("reindex_jobs_started_at_idx").on(table.startedAt),
+  })
+);
