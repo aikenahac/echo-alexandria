@@ -24,6 +24,14 @@ export async function bulkIndexEditions(editions: any[]) {
       languages: edition.languages,
       physicalFormat: edition.physicalFormat,
       editionName: edition.editionName,
+      // Quality indicator fields
+      coverCount: edition.covers?.length || 0,
+      hasCover: (edition.covers?.length || 0) > 0,
+      isbnCount: (edition.isbn10?.length || 0) + (edition.isbn13?.length || 0),
+      hasIsbn: ((edition.isbn10?.length || 0) + (edition.isbn13?.length || 0)) > 0,
+      authorCount: edition.authors?.length || 0,
+      hasAuthors: (edition.authors?.length || 0) > 0,
+      qualityScore: computeQualityScore(edition),
     },
   ]);
 
@@ -81,4 +89,29 @@ export async function bulkIndexAuthors(authors: any[]) {
 export async function refreshIndices() {
   await es.indices.refresh({ index: [INDICES.EDITIONS, INDICES.AUTHORS] });
   console.log("Refreshed Elasticsearch indices");
+}
+
+/**
+ * Compute quality score for an edition based on available metadata
+ * Higher quality = more complete data (covers, ISBNs, authors, etc.)
+ */
+function computeQualityScore(edition: any): number {
+  let score = 1.0;
+
+  // Boost for having cover images (strong signal of legitimate edition)
+  if ((edition.covers?.length || 0) > 0) score *= 1.5;
+
+  // Boost for having ISBN (indicates official publication)
+  if (((edition.isbn10?.length || 0) + (edition.isbn13?.length || 0)) > 0) score *= 1.4;
+
+  // Boost for having known authors
+  if ((edition.authors?.length || 0) > 0) score *= 1.3;
+
+  // Boost for having publisher information
+  if ((edition.publishers?.length || 0) > 0) score *= 1.1;
+
+  // Boost for having publish date
+  if (edition.publishDate) score *= 1.1;
+
+  return score;
 }

@@ -38,46 +38,117 @@ export async function searchEditions(
     index: INDICES.EDITIONS,
     body: {
       query: {
-        bool: {
-          should: [
-            // Exact match gets highest boost
-            {
-              term: {
-                "title.keyword": {
-                  value: searchTerm,
-                  boost: 100,
+        function_score: {
+          query: {
+            bool: {
+              should: [
+                // Tier 1: Exact normalized match (highest priority)
+                {
+                  multi_match: {
+                    query: searchTerm,
+                    fields: ["title.keyword^200", "authors.keyword^150"],
+                    type: "phrase",
+                    boost: 100,
+                  },
                 },
+
+                // Tier 2: Exact phrase without stemming
+                {
+                  multi_match: {
+                    query: searchTerm,
+                    fields: ["title.exact^100", "authors.exact^75"],
+                    type: "phrase",
+                    boost: 50,
+                  },
+                },
+
+                // Tier 3: Multi-field best_fields with AND operator
+                {
+                  multi_match: {
+                    query: searchTerm,
+                    fields: ["title^10", "authors^7", "editionName^3"],
+                    type: "best_fields",
+                    operator: "and",
+                    boost: 20,
+                  },
+                },
+
+                // Tier 4: Cross-fields search (treats as single virtual field)
+                {
+                  multi_match: {
+                    query: searchTerm,
+                    fields: ["title^8", "authors^6"],
+                    type: "cross_fields",
+                    operator: "and",
+                    boost: 10,
+                  },
+                },
+
+                // Tier 5: Phrase prefix for autocomplete
+                {
+                  multi_match: {
+                    query: searchTerm,
+                    fields: ["title.prefix^5", "authors^3"],
+                    type: "phrase_prefix",
+                    boost: 5,
+                  },
+                },
+
+                // Tier 6: Standard match with OR and 75% minimum
+                {
+                  multi_match: {
+                    query: searchTerm,
+                    fields: ["title^4", "authors^2", "editionName"],
+                    type: "best_fields",
+                    operator: "or",
+                    minimum_should_match: "75%",
+                    boost: 2,
+                  },
+                },
+
+                // Tier 7: Fuzzy matching for typos
+                {
+                  multi_match: {
+                    query: searchTerm,
+                    fields: ["title^2", "authors"],
+                    type: "best_fields",
+                    fuzziness: "AUTO",
+                    prefix_length: 2,
+                    boost: 1,
+                  },
+                },
+              ],
+              minimum_should_match: 1,
+            },
+          },
+
+          // Quality-based scoring functions
+          functions: [
+            // Use pre-computed quality score
+            {
+              field_value_factor: {
+                field: "qualityScore",
+                factor: 1.0,
+                modifier: "none",
+                missing: 1.0,
               },
             },
-            // Phrase match on exact field
+
+            // Additional boost for page count (indicates complete data)
             {
-              match_phrase: {
-                "title.exact": {
-                  query: searchTerm,
-                  boost: 50,
-                },
-              },
-            },
-            // Prefix match
-            {
-              match_phrase_prefix: {
-                title: {
-                  query: searchTerm,
-                  boost: 10,
-                },
-              },
-            },
-            // Standard match
-            {
-              match: {
-                title: {
-                  query: searchTerm,
-                  boost: 1,
-                },
+              filter: { exists: { field: "numberOfPages" } },
+              field_value_factor: {
+                field: "numberOfPages",
+                modifier: "log1p",
+                factor: 0.1,
+                missing: 0,
               },
             },
           ],
-          minimum_should_match: 1,
+
+          score_mode: "multiply",
+          boost_mode: "multiply",
+          max_boost: 10.0,
         },
       },
       from: offset,
