@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { serveStatic } from "hono/bun";
 import { searchEditions, searchAuthors } from "../elasticsearch/search";
 import { importAuthors } from "../import/authors";
 import { importWorks } from "../import/works";
@@ -158,6 +159,24 @@ app.get("/api/catalog/editions", async (c) => {
 // Health check
 app.get("/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Serve Docusaurus documentation (after all API routes)
+// This serves the built static site from docs-site/build
+app.use(
+  "/*",
+  serveStatic({
+    root: "./docs-site/build",
+    rewriteRequestPath: (path) => {
+      // Remove leading slash for file lookup
+      return path.startsWith("/") ? path.slice(1) : path;
+    },
+  })
+);
+
+// Fallback to index.html for client-side routing (SPA)
+app.get("/*", (c) => {
+  return c.html(Bun.file("./docs-site/build/index.html"));
 });
 
 export default app;
