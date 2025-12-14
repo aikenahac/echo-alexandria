@@ -15,7 +15,7 @@ Before installing Echo Alexandria, ensure your system meets these requirements:
 
 - **CPU**: 2 cores
 - **RAM**: 8GB (16GB recommended for imports)
-- **Disk**: 10GB free space (100GB+ for full OpenLibrary dataset)
+- **Disk**: 10GB free space (250GB+ for full OpenLibrary dataset)
 - **OS**: Linux, macOS, or Windows with WSL2
 
 ### Required Software

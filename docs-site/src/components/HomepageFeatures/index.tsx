@@ -15,7 +15,7 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Import and search through <strong>20M+ books</strong>, <strong>5M+ works</strong>, and <strong>2M+ authors</strong> from
+        Import and search through <strong>5M+ books (editions)</strong>, <strong>40M+ works</strong>, and <strong>15M+ authors</strong> from
         OpenLibrary. Monthly automated updates keep your data fresh.
       </>
     ),

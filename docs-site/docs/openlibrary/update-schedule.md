@@ -524,7 +524,7 @@ curl "localhost:9200/_cat/indices?v"
 Before each monthly import:
 
 - [ ] New dumps available at openlibrary.org/data/
-- [ ] At least 100GB free disk space
+- [ ] At least 250GB free disk space
 - [ ] Database and Elasticsearch healthy
 - [ ] Recent backup created
 - [ ] Scheduled during low-traffic window

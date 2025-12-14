@@ -249,9 +249,9 @@ docker exec -it echo_data_api bash -c '\
 
 | Tier | CPU | RAM | Disk | Time |
 |------|-----|-----|------|------|
-| Authors only | 2 cores | 4GB | 10GB | 5-15 min |
-| Authors + Works | 2 cores | 6GB | 20GB | 45-90 min |
-| Full import | 4+ cores | 8GB+ | 100GB+ | 5-9 hours |
+| Authors only | 2 cores | 4GB | 10GB | 15-60 min |
+| Authors + Works | 2 cores | 6GB | 50GB | 4-20 hours |
+| Full import | 4+ cores | 8GB+ | 250GB+ | 12-50 hours |
 
 ### Network Requirements
 
@@ -277,7 +277,7 @@ Works:
   Total: 12GB
 
 Editions:
-  Temporary: 45GB
+  Temporary: 9GB
   Final: 150GB
   Buffer: 15GB
   Total: 210GB

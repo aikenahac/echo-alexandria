@@ -36,8 +36,8 @@ Echo Alexandria maintains two main Elasticsearch indices:
 
 | Index | Documents | Purpose | Update Frequency |
 |-------|-----------|---------|-----------------|
-| `editions` | 20M+ | Book edition search by title | Monthly |
-| `authors` | 2M+ | Author search by name | Monthly |
+| `editions` | 55M+ | Book edition search by title | Monthly |
+| `authors` | 15M+ | Author search by name | Monthly |
 
 ### Editions Index
 
@@ -561,10 +561,10 @@ Typical response times:
 ### Index Size
 
 ```
-Editions index: ~50-100GB (20M documents)
+Editions index: ~50-100GB (55M documents)
 - Each document ~2-5KB (title + denormalized authors)
 
-Authors index: ~1-2GB (2M documents)
+Authors index: ~1-2GB (15M documents)
 - Each document ~500B-1KB
 
 Total: ~60GB Elasticsearch disk usage

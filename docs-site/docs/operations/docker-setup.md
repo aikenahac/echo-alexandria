@@ -348,7 +348,7 @@ docker-compose down -v
 
 - **CPU**: 4+ cores
 - **RAM**: 16GB+ (PostgreSQL: 4GB, Elasticsearch: 4GB, API: 2GB, System: 6GB)
-- **Disk**: 100GB+ (accommodate full OpenLibrary import)
+- **Disk**: 250GB+ (accommodate full OpenLibrary import)
 - **Network**: Gigabit or better for efficient data transfer
 
 ## System Prerequisites

@@ -34,8 +34,8 @@ Echo Alexandria organizes book data in a hierarchical three-level model:
 
 ```mermaid
 graph TD
-    A["Authors<br/>(2M+ records)"] -->|authorKeys array| C["Works<br/>(5M+ records)"]
-    C -->|workKeys array| E["Editions<br/>(20M+ records)"]
+    A["Authors<br/>(15M+ records)"] -->|authorKeys array| C["Works<br/>(40M+ records)"]
+    C -->|workKeys array| E["Editions<br/>(55M+ records)"]
     A -->|also referenced by| E
 
     A -->|Indexed| A_ES["Elasticsearch<br/>authors index"]
@@ -143,9 +143,9 @@ sequenceDiagram
 
 | Component | Capacity | Scaling Strategy |
 |-----------|----------|------------------|
-| Authors | 2M+ | GIN indexes on name |
-| Works | 5M+ | GIN array indexes on authorKeys |
-| Editions | 20M+ | Multiple GIN indexes + ES sharding |
+| Authors | 15M+ | GIN indexes on name |
+| Works | 40M+ | GIN array indexes on authorKeys |
+| Editions | 55M+ | Multiple GIN indexes + ES sharding |
 | Concurrent requests | 100+ | Bun's async/await model |
 
 ## Technology Stack Rationale

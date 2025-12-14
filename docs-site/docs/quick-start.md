@@ -14,7 +14,7 @@ Before you begin, ensure you have:
 - **Docker** (version 20.10 or later)
 - **Docker Compose** (version 2.0 or later)
 - **8GB RAM** minimum (16GB recommended for imports)
-- **10GB disk space** (100GB+ for full OpenLibrary import)
+- **10GB disk space** (250GB+ for full OpenLibrary import)
 
 :::tip
 Check your Docker installation:

@@ -40,7 +40,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title={`${siteConfig.title} - OpenLibrary API`}
-      description="High-performance API for searching and browsing OpenLibrary's 20M+ book collection. Built with Bun, PostgreSQL, and Elasticsearch.">
+      description="High-performance API for searching and browsing OpenLibrary's 40M+ book collection. Built with Bun, PostgreSQL, and Elasticsearch.">
       <HomepageHeader />
       <main>
         <HomepageFeatures />

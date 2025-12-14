@@ -510,9 +510,9 @@ The import pipeline ensures integrity through careful ordering:
 
 | Table | Estimated Records | Storage | Growth Rate |
 |-------|-------------------|---------|------------|
-| Authors | 2M+ | ~1GB | ~100K/month |
-| Works | 5M+ | ~3GB | ~250K/month |
-| Editions | 20M+ | ~20GB | ~1M/month |
+| Authors | 15M+ | ~5GB | ~100K/month |
+| Works | 40M+ | ~22GB | ~250K/month |
+| Editions | 55M+ | ~60GB | ~1M/month |
 
 ### Index Storage
 

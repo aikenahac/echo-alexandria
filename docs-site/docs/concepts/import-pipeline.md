@@ -48,8 +48,8 @@ Echo Alexandria enforces a specific import order to maintain referential integri
 
 ```mermaid
 graph LR
-    A["1. Authors<br/>~500MB<br/>~2M records"] --> B["2. Works<br/>~2GB<br/>~5M records"]
-    B --> C["3. Editions<br/>~45GB<br/>~20M records"]
+    A["1. Authors<br/>~500MB<br/>~15M records"] --> B["2. Works<br/>~2GB<br/>~40M records"]
+    B --> C["3. Editions<br/>~45GB<br/>~55M records"]
 
     style A fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
     style B fill:#fff9e6,stroke:#f57f17,stroke-width:2px
@@ -60,17 +60,17 @@ graph LR
 
 1. **Authors** (no dependencies)
    - Can import immediately
-   - Smallest dump (~500MB)
+   - Smallest dump (~5GB)
    - Fast import (~5 minutes)
 
 2. **Works** (depends on Authors)
    - References author keys via `authorKeys` array
-   - Medium size (~2GB)
+   - Medium size (~22GB)
    - Takes ~30 minutes
 
 3. **Editions** (depends on Authors and Works)
    - References both authors and works via arrays
-   - Largest dump (~45GB)
+   - Largest dump (~60GB)
    - Takes 24+ hours
    - Must complete authors and works first
 
