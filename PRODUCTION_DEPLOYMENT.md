@@ -232,8 +232,7 @@ With your dataset (15M authors, 55M editions):
 
 ### Backend
 - `src/db/schema.ts` - Added reindex_jobs table
-- `src/elasticsearch/reindex-from-db.ts` - Fixed count query
-- `src/elasticsearch/reindex-with-tracking.ts` - New job tracking version
+- `src/elasticsearch/reindex-optimized.ts` - Optimized reindex with job tracking
 - `src/api/server.ts` - Added reindex endpoints
 - `package.json` - Updated es:reindex script
 - `drizzle/0001_bizarre_living_tribunal.sql` - Migration file (generated)

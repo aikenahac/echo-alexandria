@@ -113,7 +113,7 @@ app.get("/api/admin/import/status/:type", async (c) => {
   }
 });
 
-// Elasticsearch re-index trigger
+// Elasticsearch re-index trigger (full)
 app.post("/api/admin/reindex", async (c) => {
   const apiKey = c.req.header("X-API-Key");
   if (apiKey !== process.env.ADMIN_API_KEY) {
@@ -121,7 +121,7 @@ app.post("/api/admin/reindex", async (c) => {
   }
 
   try {
-    const { reindexWithTracking } = await import("../elasticsearch/reindex-with-tracking");
+    const { reindexWithTracking } = await import("../elasticsearch/reindex-optimized");
     const jobId = crypto.randomUUID();
 
     // Start reindex in background (don't await)
@@ -130,13 +130,67 @@ app.post("/api/admin/reindex", async (c) => {
     });
 
     return c.json({
-      message: "Elasticsearch re-index started",
+      message: "Elasticsearch re-index started (full)",
       jobId,
       status: "started",
     });
   } catch (error) {
     console.error("Failed to start reindex:", error);
     return c.json({ error: "Failed to start reindex" }, 500);
+  }
+});
+
+// Elasticsearch re-index authors only
+app.post("/api/admin/reindex/authors", async (c) => {
+  const apiKey = c.req.header("X-API-Key");
+  if (apiKey !== process.env.ADMIN_API_KEY) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { reindexAuthorsOnly } = await import("../elasticsearch/reindex-optimized");
+    const jobId = crypto.randomUUID();
+
+    // Start reindex in background (don't await)
+    reindexAuthorsOnly(jobId).catch((error) => {
+      console.error("Authors reindex failed:", error);
+    });
+
+    return c.json({
+      message: "Authors re-index started",
+      jobId,
+      status: "started",
+    });
+  } catch (error) {
+    console.error("Failed to start authors reindex:", error);
+    return c.json({ error: "Failed to start authors reindex" }, 500);
+  }
+});
+
+// Elasticsearch re-index editions only
+app.post("/api/admin/reindex/editions", async (c) => {
+  const apiKey = c.req.header("X-API-Key");
+  if (apiKey !== process.env.ADMIN_API_KEY) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { reindexEditionsOnly } = await import("../elasticsearch/reindex-optimized");
+    const jobId = crypto.randomUUID();
+
+    // Start reindex in background (don't await)
+    reindexEditionsOnly(jobId).catch((error) => {
+      console.error("Editions reindex failed:", error);
+    });
+
+    return c.json({
+      message: "Editions re-index started",
+      jobId,
+      status: "started",
+    });
+  } catch (error) {
+    console.error("Failed to start editions reindex:", error);
+    return c.json({ error: "Failed to start editions reindex" }, 500);
   }
 });
 
@@ -148,7 +202,7 @@ app.get("/api/admin/reindex/status", async (c) => {
   }
 
   try {
-    const { getLatestReindexJob } = await import("../elasticsearch/reindex-with-tracking");
+    const { getLatestReindexJob } = await import("../elasticsearch/reindex-optimized");
     const job = await getLatestReindexJob();
 
     if (!job) {
