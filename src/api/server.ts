@@ -244,18 +244,55 @@ app.get("/api/admin/reindex/status", async (c) => {
       return c.json({ status: "no_jobs", message: "No reindex jobs found" });
     }
 
-    // Calculate progress percentage
+    // Calculate progress percentage based on current phase and indexed counts
     let progress = 0;
     if (job.status === "completed") {
       progress = 100;
     } else if (job.status === "running") {
-      const authorsProgress = job.totalAuthors > 0
-        ? (job.authorsIndexed / job.totalAuthors) * 50
-        : 0;
-      const editionsProgress = job.totalEditions > 0
-        ? (job.editionsIndexed / job.totalEditions) * 50
-        : 0;
-      progress = authorsProgress + editionsProgress;
+      // Phase-based progress calculation
+      // Total phases: recreating_indices (5%) + authors (25%) + editions (35%) + works (30%) + refreshing (5%) = 100%
+
+      switch (job.currentPhase) {
+        case "recreating_indices":
+          progress = 2.5; // Midpoint of 0-5%
+          break;
+
+        case "indexing_authors":
+          // 5% base + (0-25% based on authors progress)
+          const authorsProgress = job.totalAuthors > 0
+            ? (job.authorsIndexed / job.totalAuthors) * 25
+            : 0;
+          progress = 5 + authorsProgress;
+          break;
+
+        case "indexing_editions":
+          // 30% base (recreating + authors done) + (0-35% based on editions progress)
+          const editionsProgress = job.totalEditions > 0
+            ? (job.editionsIndexed / job.totalEditions) * 35
+            : 0;
+          progress = 30 + editionsProgress;
+          break;
+
+        case "indexing_works":
+          // 65% base (recreating + authors + editions done) + assume 15% for works midpoint
+          // Note: Works progress not tracked in job table, so we estimate
+          progress = 65 + 15; // 80% (midpoint of 65-95%)
+          break;
+
+        case "refreshing":
+          progress = 97.5; // Midpoint of 95-100%
+          break;
+
+        default:
+          // Fallback to old calculation for backwards compatibility
+          const authorsProgressFallback = job.totalAuthors > 0
+            ? (job.authorsIndexed / job.totalAuthors) * 30
+            : 0;
+          const editionsProgressFallback = job.totalEditions > 0
+            ? (job.editionsIndexed / job.totalEditions) * 65
+            : 0;
+          progress = authorsProgressFallback + editionsProgressFallback;
+      }
     }
 
     return c.json({

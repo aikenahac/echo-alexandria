@@ -135,7 +135,7 @@ export const reindexJobs = pgTable(
     editionsIndexed: integer("editions_indexed").default(0),
     totalAuthors: integer("total_authors").default(0),
     totalEditions: integer("total_editions").default(0),
-    currentPhase: text("current_phase"), // "recreating_indices" | "indexing_authors" | "indexing_editions" | "refreshing"
+    currentPhase: text("current_phase"), // "recreating_indices" | "indexing_authors" | "indexing_editions" | "indexing_works" | "refreshing"
     error: text("error"),
     startedAt: timestamp("started_at").defaultNow().notNull(),
     completedAt: timestamp("completed_at"),

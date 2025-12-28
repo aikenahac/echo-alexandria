@@ -43,7 +43,17 @@ export async function reindexWithTracking(jobId: string) {
     console.log(`[Job ${jobId}] Re-indexing editions...`);
     await reindexEditions(jobId);
 
-    // Step 4: Refresh indices
+    // Step 4: Re-index works (NEW - must come after editions)
+    await db
+      .update(reindexJobs)
+      .set({ currentPhase: "indexing_works" })
+      .where(eq(reindexJobs.id, jobId));
+
+    console.log(`[Job ${jobId}] Re-indexing works...`);
+    const { reindexWorks } = await import("./reindex-works");
+    await reindexWorks();
+
+    // Step 5: Refresh indices
     await db
       .update(reindexJobs)
       .set({ currentPhase: "refreshing" })
