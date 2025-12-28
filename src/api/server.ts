@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
 import { searchEditions, searchAuthors } from "../elasticsearch/search";
+import { searchWorks } from "../elasticsearch/work-search";
 import { importAuthors } from "../import/authors";
 import { importWorks } from "../import/works";
 import { importEditions } from "../import/editions";
@@ -12,8 +13,8 @@ const app = new Hono();
 // Enable CORS for Echo app
 app.use("/*", cors());
 
-// Search endpoints
-app.get("/api/search/editions", async (c) => {
+// Unified search endpoint with intelligent routing
+app.get("/api/search", async (c) => {
   const query = c.req.query("q");
   const limit = parseInt(c.req.query("limit") || "20");
   const offset = parseInt(c.req.query("offset") || "0");
@@ -23,26 +24,35 @@ app.get("/api/search/editions", async (c) => {
   }
 
   try {
-    const results = await searchEditions(query, limit, offset);
-    return c.json(results);
-  } catch (error) {
-    console.error("Search error:", error);
-    return c.json({ error: "Search failed" }, 500);
-  }
-});
+    // Detect query type for intelligent routing
+    const normalizedQuery = query.replace(/[-\s]/g, "");
 
-app.get("/api/search/authors", async (c) => {
-  const query = c.req.query("q");
-  const limit = parseInt(c.req.query("limit") || "20");
-  const offset = parseInt(c.req.query("offset") || "0");
+    // Check if it's an ISBN (10 or 13 digits)
+    const isIsbn = /^\d{10}(\d{3})?$/.test(normalizedQuery);
 
-  if (!query) {
-    return c.json({ error: "Query parameter 'q' is required" }, 400);
-  }
+    // Check if it's an edition key pattern (/books/OL*)
+    const isEditionKey = query.startsWith("/books/");
 
-  try {
-    const results = await searchAuthors(query, limit, offset);
-    return c.json(results);
+    // Route to appropriate search index
+    if (isIsbn || isEditionKey) {
+      // Search editions index for specific edition lookup
+      const results = await searchEditions(query, limit, offset);
+      return c.json({
+        type: "editions",
+        query,
+        results,
+        total: results.length,
+      });
+    } else {
+      // Search works index for general text queries (default)
+      const results = await searchWorks(query, limit, offset);
+      return c.json({
+        type: "works",
+        query,
+        results,
+        total: results.length,
+      });
+    }
   } catch (error) {
     console.error("Search error:", error);
     return c.json({ error: "Search failed" }, 500);
@@ -191,6 +201,31 @@ app.post("/api/admin/reindex/editions", async (c) => {
   } catch (error) {
     console.error("Failed to start editions reindex:", error);
     return c.json({ error: "Failed to start editions reindex" }, 500);
+  }
+});
+
+// Elasticsearch re-index works only
+app.post("/api/admin/reindex/works", async (c) => {
+  const apiKey = c.req.header("X-API-Key");
+  if (apiKey !== process.env.ADMIN_API_KEY) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { reindexWorks } = await import("../elasticsearch/reindex-works");
+
+    // Start reindex in background (don't await)
+    reindexWorks().catch((error) => {
+      console.error("Works reindex failed:", error);
+    });
+
+    return c.json({
+      message: "Works re-index started",
+      status: "started",
+    });
+  } catch (error) {
+    console.error("Failed to start works reindex:", error);
+    return c.json({ error: "Failed to start works reindex" }, 500);
   }
 });
 

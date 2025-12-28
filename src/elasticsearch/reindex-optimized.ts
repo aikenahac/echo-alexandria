@@ -2,7 +2,7 @@ import { db } from "../db";
 import { editions, authors, reindexJobs } from "../db/schema";
 import { recreateIndices } from "./indices";
 import { bulkIndexEditions, bulkIndexAuthors, refreshIndices } from "./indexing";
-import { count, desc, eq, gt } from "drizzle-orm";
+import { count, desc, eq, gt, inArray } from "drizzle-orm";
 
 /**
  * Optimized re-index with cursor-based pagination and reduced DB writes
@@ -123,8 +123,34 @@ async function reindexEditions(jobId: string) {
 
     if (batch.length === 0) break;
 
-    // Index batch to Elasticsearch
-    await bulkIndexEditions(batch);
+    // CRITICAL FIX: Resolve author names before indexing (same as import process)
+    // Extract all unique author keys from this batch
+    const authorKeys = [
+      ...new Set(batch.flatMap((edition) => edition.authorKeys || [])),
+    ];
+
+    // Build a map of author key -> author name
+    const authorsMap = new Map<string, string>();
+
+    if (authorKeys.length > 0) {
+      const authorRecords = await db
+        .select({ key: authors.key, name: authors.name })
+        .from(authors)
+        .where(inArray(authors.key, authorKeys));
+
+      authorRecords.forEach((a) => authorsMap.set(a.key, a.name));
+    }
+
+    // Prepare editions with resolved author names for Elasticsearch
+    const editionsForES = batch.map((edition) => ({
+      ...edition,
+      authors: (edition.authorKeys || []).map(
+        (k) => authorsMap.get(k) || "Unknown"
+      ),
+    }));
+
+    // Index batch to Elasticsearch with resolved author names
+    await bulkIndexEditions(editionsForES);
 
     // Update last key for cursor pagination
     const lastBatch = batch[batch.length - 1];
