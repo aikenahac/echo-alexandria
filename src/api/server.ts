@@ -212,7 +212,7 @@ app.post("/api/admin/reindex/works", async (c) => {
   }
 
   try {
-    const { reindexWorks } = await import("../elasticsearch/reindex-works");
+    const { reindexWorks } = await import("../elasticsearch/reindex-works-optimized");
 
     // Start reindex in background (don't await)
     reindexWorks().catch((error) => {
@@ -259,16 +259,20 @@ app.get("/api/admin/reindex/status", async (c) => {
 
         case "indexing_authors":
           // 5% base + (0-25% based on authors progress)
-          const authorsProgress = job.totalAuthors > 0
-            ? (job.authorsIndexed / job.totalAuthors) * 25
+          const totalAuthors = job.totalAuthors ?? 0;
+          const authorsIndexed = job.authorsIndexed ?? 0;
+          const authorsProgress = totalAuthors > 0
+            ? (authorsIndexed / totalAuthors) * 25
             : 0;
           progress = 5 + authorsProgress;
           break;
 
         case "indexing_editions":
           // 30% base (recreating + authors done) + (0-35% based on editions progress)
-          const editionsProgress = job.totalEditions > 0
-            ? (job.editionsIndexed / job.totalEditions) * 35
+          const totalEditions = job.totalEditions ?? 0;
+          const editionsIndexed = job.editionsIndexed ?? 0;
+          const editionsProgress = totalEditions > 0
+            ? (editionsIndexed / totalEditions) * 35
             : 0;
           progress = 30 + editionsProgress;
           break;
@@ -285,11 +289,15 @@ app.get("/api/admin/reindex/status", async (c) => {
 
         default:
           // Fallback to old calculation for backwards compatibility
-          const authorsProgressFallback = job.totalAuthors > 0
-            ? (job.authorsIndexed / job.totalAuthors) * 30
+          const totalAuthorsFallback = job.totalAuthors ?? 0;
+          const authorsIndexedFallback = job.authorsIndexed ?? 0;
+          const totalEditionsFallback = job.totalEditions ?? 0;
+          const editionsIndexedFallback = job.editionsIndexed ?? 0;
+          const authorsProgressFallback = totalAuthorsFallback > 0
+            ? (authorsIndexedFallback / totalAuthorsFallback) * 30
             : 0;
-          const editionsProgressFallback = job.totalEditions > 0
-            ? (job.editionsIndexed / job.totalEditions) * 65
+          const editionsProgressFallback = totalEditionsFallback > 0
+            ? (editionsIndexedFallback / totalEditionsFallback) * 65
             : 0;
           progress = authorsProgressFallback + editionsProgressFallback;
       }
@@ -367,8 +375,9 @@ app.use(
 );
 
 // Fallback to index.html for client-side routing (SPA)
-app.get("/*", (c) => {
-  return c.html(Bun.file("./docs-site/build/index.html"));
+app.get("/*", async (c) => {
+  const file = Bun.file("./docs-site/build/index.html");
+  return c.html(await file.text());
 });
 
 export default app;

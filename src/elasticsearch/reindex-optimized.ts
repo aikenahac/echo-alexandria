@@ -50,7 +50,7 @@ export async function reindexWithTracking(jobId: string) {
       .where(eq(reindexJobs.id, jobId));
 
     console.log(`[Job ${jobId}] Re-indexing works...`);
-    const { reindexWorks } = await import("./reindex-works");
+    const { reindexWorks } = await import("./reindex-works-optimized");
     await reindexWorks();
 
     // Step 5: Refresh indices
